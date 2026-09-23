@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="チェックカレンダー">
+
+  <title>チェックカレンダー</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Helvetica Neue",
+        Arial,
+        sans-serif;
+      background: #f5f5f7;
+      color: #111;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding:
+        calc(env(safe-area-inset-top) + 18px)
+        16px
+        calc(env(safe-area-inset-bottom) + 30px);
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .total-box {
+      text-align: right;
+    }
+
+    .total-label {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 2px;
+    }
+
+    .total-count {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .calendar-card {
+      background: white;
+      border-radius: 22px;
+      padding: 18px 14px 20px;
+      box-shadow: 0 3px 18px rgba(0, 0, 0, 0.06);
+    }
+
+    .month-header {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .month-title {
+      text-align: center;
+      font-size: 23px;
+      font-weight: 700;
+    }
+
+    .nav-button {
+      border: none;
+      background: #eeeeef;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-button:disabled {
+      opacity: 0.25;
+    }
+
+    .weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #777;
+      padding: 6px 0 10px;
+    }
+
+    .weekday:first-child {
+      color: #d64b4b;
+    }
+
+    .weekday:last-child {
+      color: #4776d0;
+    }
+
+    .day {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 50%;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 2px;
+    }
+
+    .day.active {
+      background: #111;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .day.today {
+      outline: 2px solid #111;
+      outline-offset: -3px;
+    }
+
+    .day.active.today {
+      outline-color: #fff;
+    }
+
+    .day.disabled {
+      color: #c7c7cc;
+      cursor: default;
+    }
+
+    .empty {
+      aspect-ratio: 1 / 1;
+    }
+
+    .hint {
+      text-align: center;
+      color: #888;
+      font-size: 12px;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    .range {
+      margin-top: 16px;
+      text-align: center;
+      color: #999;
+      font-size: 11px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+
+    <div class="top-bar">
+      <div class="title">チェックカレンダー</div>
+
+      <div class="total-box">
+        <div class="total-label">TOTAL</div>
+        <div class="total-count" id="totalCount">0</div>
+      </div>
+    </div>
+
+    <section class="calendar-card">
+
+      <div class="month-header">
+        <button
+          class="nav-button"
+          id="prevButton"
+          aria-label="前の月"
+        >
+          ‹
+        </button>
+
+        <div
+          class="month-title"
+          id="monthTitle"
+        ></div>
+
+        <button
+          class="nav-button"
+          id="nextButton"
+          aria-label="次の月"
+        >
+          ›
+        </button>
+      </div>
+
+      <div class="weekdays">
+        <div class="weekday">日</div>
+        <div class="weekday">月</div>
+        <div class="weekday">火</div>
+        <div class="weekday">水</div>
+        <div class="weekday">木</div>
+        <div class="weekday">金</div>
+        <div class="weekday">土</div>
+      </div>
+
+      <div
+        class="calendar-grid"
+        id="calendarGrid"
+      ></div>
+
+    </section>
+
+    <div class="hint">
+      日付をタップするとチェックできます。<br>
+      もう一度タップすると解除できます。
+    </div>
+
+    <div
+      class="range"
+      id="rangeText"
+    ></div>
+
+  </main>
+
+  <script>
+    const STORAGE_KEY = "simple-check-calendar-v1";
+
+    function startOfDay(date) {
+      return new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+    }
+
+    function formatDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    }
+
+    function sameDate(a, b) {
+      return (
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+      );
+    }
+
+    const today = startOfDay(new Date());
+
+    const endDate = new Date(
+      today.getFullYear() + 3,
+      today.getMonth(),
+      today.getDate()
+    );
+
+    let currentYear = today.getFullYear();
+    let currentMonth = today.getMonth();
+
+    let checkedDates = new Set();
+
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(STORAGE_KEY) || "[]"
+      );
+
+      if (Array.isArray(saved)) {
+        checkedDates = new Set(saved);
+      }
+    } catch (error) {
+      checkedDates = new Set();
+    }
+
+    const monthTitle =
+      document.getElementById("monthTitle");
+
+    const calendarGrid =
+      document.getElementById("calendarGrid");
+
+    const totalCount =
+      document.getElementById("totalCount");
+
+    const prevButton =
+      document.getElementById("prevButton");
+
+    const nextButton =
+      document.getElementById("nextButton");
+
+    const rangeText =
+      document.getElementById("rangeText");
+
+    function saveCheckedDates() {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify([...checkedDates])
+      );
+    }
+
+    function updateTotal() {
+      totalCount.textContent = checkedDates.size;
+    }
+
+    function isDateAllowed(date) {
+      const target = startOfDay(date);
+
+      return (
+        target >= today &&
+        target <= endDate
+      );
+    }
+
+    function renderCalendar() {
+      calendarGrid.innerHTML = "";
+
+      monthTitle.textContent =
+        `${currentYear}年 ${currentMonth + 1}月`;
+
+      const firstDay =
+        new Date(currentYear, currentMonth, 1);
+
+      const lastDay =
+        new Date(currentYear, currentMonth + 1, 0);
+
+      const firstWeekday =
+        firstDay.getDay();
+
+      for (let i = 0; i < firstWeekday; i++) {
+        const empty =
+          document.createElement("div");
+
+        empty.className = "empty";
+        calendarGrid.appendChild(empty);
+      }
+
+      for (
+        let dayNumber = 1;
+        dayNumber <= lastDay.getDate();
+        dayNumber++
+      ) {
+        const date =
+          new Date(
+            currentYear,
+            currentMonth,
+            dayNumber
+          );
+
+        const dateKey =
+          formatDateKey(date);
+
+        const button =
+          document.createElement("button");
+
+        button.className = "day";
+        button.textContent = dayNumber;
+
+        if (sameDate(date, today)) {
+          button.classList.add("today");
+        }
+
+        if (checkedDates.has(dateKey)) {
+          button.classList.add("active");
+        }
+
+        if (!isDateAllowed(date)) {
+          button.classList.add("disabled");
+          button.disabled = true;
+        } else {
+          button.addEventListener(
+            "click",
+            () => {
+              if (checkedDates.has(dateKey)) {
+                checkedDates.delete(dateKey);
+              } else {
+                checkedDates.add(dateKey);
+              }
+
+              saveCheckedDates();
+              updateTotal();
+              renderCalendar();
+            }
+          );
+        }
+
+        calendarGrid.appendChild(button);
+      }
+
+      updateNavigationButtons();
+      updateTotal();
+    }
+
+    function updateNavigationButtons() {
+      const current =
+        new Date(currentYear, currentMonth, 1);
+
+      const minimum =
+        new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1
+        );
+
+      const maximum =
+        new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          1
+        );
+
+      prevButton.disabled =
+        current <= minimum;
+
+      nextButton.disabled =
+        current >= maximum;
+    }
+
+    prevButton.addEventListener(
+      "click",
+      () => {
+        currentMonth--;
+
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+
+        renderCalendar();
+      }
+    );
+
+    nextButton.addEventListener(
+      "click",
+      () => {
+        currentMonth++;
+
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+
+        renderCalendar();
+      }
+    );
+
+    rangeText.textContent =
+      `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 ～ ` +
+      `${endDate.getFullYear()}年${endDate.getMonth() + 1}月${endDate.getDate()}日`;
+
+    renderCalendar();
+  </script>
+</body>
+</html>
