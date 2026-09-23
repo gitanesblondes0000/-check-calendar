@@ -255,6 +255,22 @@
   <script>
     const STORAGE_KEY = "simple-check-calendar-v1";
 
+    /*
+      利用期間を固定
+      2026年9月23日 ～ 2029年9月23日
+    */
+    const startDate = new Date(
+      2026,
+      8,
+      23
+    );
+
+    const endDate = new Date(
+      2029,
+      8,
+      23
+    );
+
     function startOfDay(date) {
       return new Date(
         date.getFullYear(),
@@ -265,8 +281,13 @@
 
     function formatDateKey(date) {
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(
+        date.getMonth() + 1
+      ).padStart(2, "0");
+
+      const day = String(
+        date.getDate()
+      ).padStart(2, "0");
 
       return `${year}-${month}-${day}`;
     }
@@ -279,95 +300,170 @@
       );
     }
 
-    const today = startOfDay(new Date());
-
-    const endDate = new Date(
-      today.getFullYear() + 3,
-      today.getMonth(),
-      today.getDate()
+    const today = startOfDay(
+      new Date()
     );
 
-    let currentYear = today.getFullYear();
-    let currentMonth = today.getMonth();
+    let currentYear =
+      today.getFullYear();
 
-    let checkedDates = new Set();
+    let currentMonth =
+      today.getMonth();
+
+    /*
+      万一、利用期間外で開いた場合は
+      最初の月または最後の月を表示
+    */
+    if (
+      today <
+      startOfDay(startDate)
+    ) {
+      currentYear =
+        startDate.getFullYear();
+
+      currentMonth =
+        startDate.getMonth();
+    }
+
+    if (
+      today >
+      startOfDay(endDate)
+    ) {
+      currentYear =
+        endDate.getFullYear();
+
+      currentMonth =
+        endDate.getMonth();
+    }
+
+    let checkedDates =
+      new Set();
 
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(STORAGE_KEY) || "[]"
-      );
+      const saved =
+        JSON.parse(
+          localStorage.getItem(
+            STORAGE_KEY
+          ) || "[]"
+        );
 
-      if (Array.isArray(saved)) {
-        checkedDates = new Set(saved);
+      if (
+        Array.isArray(saved)
+      ) {
+        checkedDates =
+          new Set(saved);
       }
     } catch (error) {
-      checkedDates = new Set();
+      checkedDates =
+        new Set();
     }
 
     const monthTitle =
-      document.getElementById("monthTitle");
+      document.getElementById(
+        "monthTitle"
+      );
 
     const calendarGrid =
-      document.getElementById("calendarGrid");
+      document.getElementById(
+        "calendarGrid"
+      );
 
     const totalCount =
-      document.getElementById("totalCount");
+      document.getElementById(
+        "totalCount"
+      );
 
     const prevButton =
-      document.getElementById("prevButton");
+      document.getElementById(
+        "prevButton"
+      );
 
     const nextButton =
-      document.getElementById("nextButton");
+      document.getElementById(
+        "nextButton"
+      );
 
     const rangeText =
-      document.getElementById("rangeText");
+      document.getElementById(
+        "rangeText"
+      );
 
     function saveCheckedDates() {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify([...checkedDates])
+        JSON.stringify(
+          [...checkedDates]
+        )
       );
     }
 
     function updateTotal() {
-      totalCount.textContent = checkedDates.size;
+      totalCount.textContent =
+        checkedDates.size;
     }
 
+    /*
+      現在の日付とは関係なく、
+      固定した利用期間内なら操作可能
+    */
     function isDateAllowed(date) {
-      const target = startOfDay(date);
+      const target =
+        startOfDay(date);
 
       return (
-        target >= today &&
-        target <= endDate
+        target >=
+          startOfDay(startDate) &&
+        target <=
+          startOfDay(endDate)
       );
     }
 
     function renderCalendar() {
-      calendarGrid.innerHTML = "";
+      calendarGrid.innerHTML =
+        "";
 
       monthTitle.textContent =
         `${currentYear}年 ${currentMonth + 1}月`;
 
       const firstDay =
-        new Date(currentYear, currentMonth, 1);
+        new Date(
+          currentYear,
+          currentMonth,
+          1
+        );
 
       const lastDay =
-        new Date(currentYear, currentMonth + 1, 0);
+        new Date(
+          currentYear,
+          currentMonth + 1,
+          0
+        );
 
       const firstWeekday =
         firstDay.getDay();
 
-      for (let i = 0; i < firstWeekday; i++) {
+      for (
+        let i = 0;
+        i < firstWeekday;
+        i++
+      ) {
         const empty =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
 
-        empty.className = "empty";
-        calendarGrid.appendChild(empty);
+        empty.className =
+          "empty";
+
+        calendarGrid.appendChild(
+          empty
+        );
       }
 
       for (
         let dayNumber = 1;
-        dayNumber <= lastDay.getDate();
+        dayNumber <=
+          lastDay.getDate();
         dayNumber++
       ) {
         const date =
@@ -381,30 +477,64 @@
           formatDateKey(date);
 
         const button =
-          document.createElement("button");
+          document.createElement(
+            "button"
+          );
 
-        button.className = "day";
-        button.textContent = dayNumber;
+        button.className =
+          "day";
 
-        if (sameDate(date, today)) {
-          button.classList.add("today");
+        button.textContent =
+          dayNumber;
+
+        if (
+          sameDate(
+            date,
+            today
+          )
+        ) {
+          button.classList.add(
+            "today"
+          );
         }
 
-        if (checkedDates.has(dateKey)) {
-          button.classList.add("active");
+        if (
+          checkedDates.has(
+            dateKey
+          )
+        ) {
+          button.classList.add(
+            "active"
+          );
         }
 
-        if (!isDateAllowed(date)) {
-          button.classList.add("disabled");
-          button.disabled = true;
+        if (
+          !isDateAllowed(
+            date
+          )
+        ) {
+          button.classList.add(
+            "disabled"
+          );
+
+          button.disabled =
+            true;
         } else {
           button.addEventListener(
             "click",
             () => {
-              if (checkedDates.has(dateKey)) {
-                checkedDates.delete(dateKey);
+              if (
+                checkedDates.has(
+                  dateKey
+                )
+              ) {
+                checkedDates.delete(
+                  dateKey
+                );
               } else {
-                checkedDates.add(dateKey);
+                checkedDates.add(
+                  dateKey
+                );
               }
 
               saveCheckedDates();
@@ -414,7 +544,9 @@
           );
         }
 
-        calendarGrid.appendChild(button);
+        calendarGrid.appendChild(
+          button
+        );
       }
 
       updateNavigationButtons();
@@ -423,12 +555,16 @@
 
     function updateNavigationButtons() {
       const current =
-        new Date(currentYear, currentMonth, 1);
+        new Date(
+          currentYear,
+          currentMonth,
+          1
+        );
 
       const minimum =
         new Date(
-          today.getFullYear(),
-          today.getMonth(),
+          startDate.getFullYear(),
+          startDate.getMonth(),
           1
         );
 
@@ -451,7 +587,9 @@
       () => {
         currentMonth--;
 
-        if (currentMonth < 0) {
+        if (
+          currentMonth < 0
+        ) {
           currentMonth = 11;
           currentYear--;
         }
@@ -465,7 +603,9 @@
       () => {
         currentMonth++;
 
-        if (currentMonth > 11) {
+        if (
+          currentMonth > 11
+        ) {
           currentMonth = 0;
           currentYear++;
         }
@@ -475,8 +615,12 @@
     );
 
     rangeText.textContent =
-      `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 ～ ` +
-      `${endDate.getFullYear()}年${endDate.getMonth() + 1}月${endDate.getDate()}日`;
+      `${startDate.getFullYear()}年` +
+      `${startDate.getMonth() + 1}月` +
+      `${startDate.getDate()}日 ～ ` +
+      `${endDate.getFullYear()}年` +
+      `${endDate.getMonth() + 1}月` +
+      `${endDate.getDate()}日`;
 
     renderCalendar();
   </script>
